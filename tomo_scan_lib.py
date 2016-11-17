@@ -79,6 +79,7 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['HDF1_NumCapture'] = PV(variableDict['IOC_Prefix'] + 'HDF1:NumCapture')
 	global_PVs['HDF1_Capture'] = PV(variableDict['IOC_Prefix'] + 'HDF1:Capture')
 	global_PVs['HDF1_FullFileName_RBV'] = PV(variableDict['IOC_Prefix'] + 'HDF1:FullFileName_RBV')
+	global_PVs['HDF1_ArrayPort'] = PV(variableDict['IOC_Prefix'] + 'HDF1:NDArrayPort')
 
 	#motor pv's
 	global_PVs['Motor_SampleX'] = PV('32idcTXM:mcs:c1:m2.VAL')
@@ -133,6 +134,9 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['Proc1_Filter_Enable'] = PV(variableDict['IOC_Prefix'] + 'Proc1:EnableFilter')
 	global_PVs['Proc1_Filter_Type'] = PV(variableDict['IOC_Prefix'] + 'Proc1:FilterType')
 	global_PVs['Proc1_Num_Filter'] = PV(variableDict['IOC_Prefix'] + 'Proc1:NumFilter')
+	global_PVs['Proc1_Reset_Filter'] = PV(variableDict['IOC_Prefix'] + 'Proc1:ResetFilter')
+	global_PVs['Proc1_AutoReset_Filter'] = PV(variableDict['IOC_Prefix'] + 'Proc1:AutoResetFilter')
+	global_PVs['Proc1_Filter_Callbacks'] = PV(variableDict['IOC_Prefix'] + 'Proc1:FilterCallbacks')
 
 	#tiff writer pv's
 	global_PVs['TIFF1_AutoSave'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:AutoSave')
@@ -146,8 +150,12 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['TIFF1_FileNumber'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FileNumber')
 	global_PVs['TIFF1_FileName'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FileName')
 	global_PVs['TIFF1_ArrayPort'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:NDArrayPort')
-
-
+	
+	#energy
+	global_PVs['DCMmvt'] = PV('32ida:KohzuModeBO.VAL')
+	global_PVs['GAPputEnergy'] = PV('32id:ID32us_energy')
+	global_PVs['EnergyWait'] = PV('ID32us:Busy')
+	global_PVs['DCMputEnergy'] = PV('32ida:BraggEAO.VAL')
 
 def setup_detector(global_PVs, variableDict):
 	print 'setup_detector()'
@@ -181,8 +189,26 @@ def setup_detector(global_PVs, variableDict):
 	#global_PVs['ClearTheta'].put(1)
 
 
-def setup_writer(global_PVs, variableDict):
+def setup_writer(global_PVs, variableDict, filename=None):
 	print 'setup_writer()'
+	if variableDict.has_key('Recursive_Filter_Enabled'):
+		if variableDict['Recursive_Filter_Enabled'] == 1:
+			global_PVs['Proc1_Callbacks'].put('Disable')
+			global_PVs['Proc1_Filter_Enable'].put('Enable')
+			global_PVs['HDF1_ArrayPort'].put('PROC1')
+			global_PVs['Proc1_Filter_Type'].put( str( variableDict['Recursive_Filter_Type'] ) )
+			global_PVs['Proc1_Num_Filter'].put( int( variableDict['Recursive_Filter_N_Images'] ) )
+			global_PVs['Proc1_Reset_Filter'].put( 1 )
+			global_PVs['Proc1_AutoReset_Filter'].put( 'Yes' )
+			global_PVs['Proc1_Filter_Callbacks'].put( 'Array N only' )
+		else:
+			global_PVs['Proc1_Callbacks'].put('Disable')
+			global_PVs['Proc1_Filter_Enable'].put('Disable')
+			global_PVs['HDF1_ArrayPort'] = global_PVs['Proc1_ArrayPort'].get()
+	else:
+		global_PVs['Proc1_Callbacks'].put('Disable')
+		global_PVs['Proc1_Filter_Enable'].put('Disable')
+		global_PVs['HDF1_ArrayPort'] = global_PVs['Proc1_ArrayPort'].get()
 	global_PVs['HDF1_AutoSave'].put('Yes')
 	global_PVs['HDF1_DeleteDriverFile'].put('No')
 	global_PVs['HDF1_EnableCallbacks'].put('Enable')
@@ -190,6 +216,8 @@ def setup_writer(global_PVs, variableDict):
 	totalProj = int(variableDict['PreDarkImages']) + int(variableDict['PreWhiteImages']) + int(variableDict['Projections']) + int(variableDict['PostDarkImages']) + int(variableDict['PostWhiteImages'])
 	global_PVs['HDF1_NumCapture'].put(totalProj)
 	global_PVs['HDF1_FileWriteMode'].put(str(variableDict['FileWriteMode']), wait=True)
+	if not filename == None:
+		global_PVs['HDF1_FileName'].put(filename)
 	global_PVs['HDF1_Capture'].put(1)
 	wait_pv(global_PVs['HDF1_Capture'], 1)
 
@@ -293,5 +321,35 @@ def move_dataset_to_run_dir(global_PVs, variableDict):
 		shutil.move(full_path, run_full_path)
 	except:
 		print 'error moving dataset to run directory'
+
+def move_energy(energy, global_PVs, variableDict):
+	print 'move_energy()', energy
+	prev_energy = float(global_PVs['DCMputEnergy'].get())
+	curr_CCD_location = float(global_PVs['CCD_Motor'].get())
+
+	landa = 1240.0 / (prev_energy * 1000.0)
+	ZP_focal = ZP_diameter * drn / (1000.0 * landa)
+	D = (curr_CCD_location + math.sqrt(curr_CCD_location * curr_CCD_location - 4.0 * curr_CCD_location * ZP_focal) ) / 2.0
+	Mag = (D - ZP_focal) / ZP_focal
+	print 'mag', Mag
+	global_PVs['DCMmvt'].put(1)
+
+	landa = 1240.0 / (energy * 1000.0)
+	ZP_focal = ZP_diameter * drn / (1000.0 * landa)
+	dist_ZP_ccd = Mag * ZP_focal + ZP_focal
+	ZP_WD = dist_ZP_ccd * ZP_focal / (dist_ZP_ccd - ZP_focal)
+	CCD_location = ZP_WD + dist_ZP_ccd
+	print 'move ccd ', CCD_location
+	global_PVs['CCD_Motor'].put(CCD_location, wait=True)
+	print 'move zp ', ZP_WD
+	global_PVs['ZpLocation'].put(ZP_WD, wait=True)
+
+	global_PVs['DCMputEnergy'].put(energy, wait=True)
+
+	global_PVs['GAPputEnergy'].put(energy)
+	wait_pv(global_PVs['EnergyWait'], 0)
+	global_PVs['GAPputEnergy'].put(energy + float(variableDict['Offset']))
+	wait_pv(global_PVs['EnergyWait'], 0)
+	global_PVs['DCMmvt'].put(0)
 
 

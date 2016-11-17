@@ -33,12 +33,15 @@ variableDict = {'PreDarkImages': 5,
 		'SampleEndPos': 180.0,
 		'StartSleep_min': 0,
 		'StabilizeSleep_ms': 0,
-		'ExposureTime': 1,
+		'ExposureTime': 0.01,
 		'ShutterOpenDelay': 0.05,
 		'IOC_Prefix': '32idcPG3:',
 #		'ExternalShutter': 0,
 		'FileWriteMode': 'Stream',
 		'rot_speed_deg_per_s': 1,
+		'Recursive_Filter_Enabled': 1,
+		'Recursive_Filter_N_Images': 4,
+		'Recursive_Filter_Type': 'RecursiveAve',
 		'UseInterferometer': 0
 		}
 
@@ -74,9 +77,16 @@ def tomo_scan():
 		# save theta to array
 		theta += [sample_rot]
 		# start detector acquire
-		global_PVs['Cam1_Acquire'].put(DetectorAcquire)
-		wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
-		global_PVs['Cam1_SoftwareTrigger'].put(1)
+		if variableDict['Recursive_Filter_Enabled'] == 1:
+			global_PVs['Proc1_Callbacks'].put('Enable', wait=True)
+			for i in range(int(variableDict['Recursive_Filter_N_Images'])):
+				global_PVs['Cam1_Acquire'].put(DetectorAcquire)
+				wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
+				global_PVs['Cam1_SoftwareTrigger'].put(1)
+		else:
+			global_PVs['Cam1_Acquire'].put(DetectorAcquire)
+			wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
+			global_PVs['Cam1_SoftwareTrigger'].put(1)
 		# if external shutter
 		#if int(variableDict['ExternalShutter']) == 1:
 		#	print 'External trigger'
@@ -90,6 +100,8 @@ def tomo_scan():
 	#global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
 	#if int(variableDict['ExternalShutter']) == 1:
 	#	global_PVs['SetSoftGlueForStep'].put('0')
+	if variableDict['Recursive_Filter_Enabled'] == 1:
+			global_PVs['Proc1_Callbacks'].put('Disable', wait=True)
 	return theta, interf_arr
 
 def mirror_fly_scan(rev=False):
@@ -124,7 +136,7 @@ def mirror_fly_scan(rev=False):
 	return interf_arr
 
 
-def start_scan():
+def full_tomo_scan():
 	print 'start_scan()'
 	init_general_PVs(global_PVs, variableDict)
 	#collect interferometer
@@ -171,7 +183,7 @@ def start_scan():
 
 def main():
 	update_variable_dict(variableDict)
-	start_scan()
+	full_tomo_scan()
 
 if __name__ == '__main__':
 	main()
