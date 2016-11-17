@@ -17,7 +17,6 @@ from tomo_scan_lib import *
 
 global variableDict
 
-
 variableDict = {'PreDarkImages': 5,
 		'PreWhiteImages': 10,
 		'Projections': 721,
@@ -41,7 +40,7 @@ variableDict = {'PreDarkImages': 5,
 		'rot_speed_deg_per_s': 1,
 		'Recursive_Filter_Enabled': 1,
 		'Recursive_Filter_N_Images': 4,
-		'Recursive_Filter_Type': 'RecursiveAve',
+#		'Recursive_Filter_Type': 'RecursiveAve',
 		'UseInterferometer': 0
 		}
 
@@ -175,6 +174,8 @@ def full_tomo_scan():
 	#if int(variableDict['ExternalShutter']) == 1:
 	#	global_PVs['SetSoftGlueForStep'].put('0')
 	add_extra_hdf5(global_PVs, variableDict, theta, interf_arrs)
+	global_PVs['HDF1_ArrayPort'] = global_PVs['Proc1_ArrayPort'].get()
+	global_PVs['Proc1_Filter_Callbacks'].put( 'Every array' )
 	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
 	global_PVs['Cam1_TriggerMode'].put('Overlapped', wait=True)
 	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)

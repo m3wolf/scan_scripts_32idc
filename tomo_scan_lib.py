@@ -24,6 +24,7 @@ DetectorAcquire = 1
 UseShutterA = 0
 UseShutterB = 0
 PG_Trigger_External_Trigger = 1
+Recursive_Filter_Type = 'RecursiveAve'
 
 
 def update_variable_dict(variableDict):
@@ -196,7 +197,7 @@ def setup_writer(global_PVs, variableDict, filename=None):
 			global_PVs['Proc1_Callbacks'].put('Disable')
 			global_PVs['Proc1_Filter_Enable'].put('Enable')
 			global_PVs['HDF1_ArrayPort'].put('PROC1')
-			global_PVs['Proc1_Filter_Type'].put( str( variableDict['Recursive_Filter_Type'] ) )
+			global_PVs['Proc1_Filter_Type'].put( Recursive_Filter_Type )
 			global_PVs['Proc1_Num_Filter'].put( int( variableDict['Recursive_Filter_N_Images'] ) )
 			global_PVs['Proc1_Reset_Filter'].put( 1 )
 			global_PVs['Proc1_AutoReset_Filter'].put( 'Yes' )
