@@ -11,6 +11,7 @@ import shutil
 import os
 import imp
 import traceback
+import numpy
 
 ShutterA_Open_Value = 0
 ShutterA_Close_Value = 1
@@ -352,5 +353,24 @@ def move_energy(energy, global_PVs, variableDict):
 	global_PVs['GAPputEnergy'].put(energy + float(variableDict['Offset']))
 	wait_pv(global_PVs['EnergyWait'], 0)
 	global_PVs['DCMmvt'].put(0)
+
+def gen_theta_list(start, end, proj, div):
+	print 'gen_theta_list()'
+	theta = []
+	full_list = numpy.linspace(start, end, num=proj)
+	print 'full list = ',full_list
+	s = 0
+	while len(full_list) > 0:
+		theta += [full_list[s]]
+		full_list = numpy.delete(full_list, s)
+		jump = len(full_list) / int(div)
+		s += jump
+		if s >= len(full_list):
+			s = 0
+	sidx = theta.index(end)
+	save_val = theta[int(div)-1]
+	theta[int(div) - 1] = end
+	theta[sidx] = save_val
+	return theta
 
 

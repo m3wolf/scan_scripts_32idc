@@ -11,7 +11,6 @@ import shutil
 import os
 import imp
 import traceback
-
 from tomo_scan_lib import *
 
 
@@ -38,7 +37,8 @@ variableDict = {'PreDarkImages': 5,
 #		'ExternalShutter': 0,
 		'FileWriteMode': 'Stream',
 		'rot_speed_deg_per_s': 1,
-		'Recursive_Filter_Enabled': 1,
+		'Interlaced': 0,
+		'Recursive_Filter_Enabled': 0,
 		'Recursive_Filter_N_Images': 4,
 #		'Recursive_Filter_Type': 'RecursiveAve',
 		'UseInterferometer': 0
@@ -53,28 +53,27 @@ def getVariableDict():
 
 def tomo_scan():
 	print 'tomo_scan()'
-	theta = []
+	theta = numpy.linspace(float(variableDict['SampleStartPos']), float(variableDict['SampleEndPos']), float(variableDict['Projections']) )
+	if int(variableDict['Interlaced']) > 0:
+		theta = gen_theta_list(float(variableDict['SampleStartPos']), float(variableDict['SampleEndPos']), float(variableDict['Projections']), 6)
 	interf_arr = []
 	if int(variableDict['UseInterferometer']) > 0:
 		global_PVs['Interferometer_Mode'].put('ONE-SHOT')
-	step_size = ((float(variableDict['SampleEndPos']) - float(variableDict['SampleStartPos'])) / (float(variableDict['Projections']) - 1.0))
+	 float(variableDict['Projections']) - 1.0))
 	#end_pos = float(variableDict['SampleEndPos'])
 	global_PVs['Cam1_FrameType'].put(FrameTypeData, wait=True)
 	global_PVs['Cam1_NumImages'].put(1, wait=True)
 	#if int(variableDict['ExternalShutter']) == 1:
 	#	global_PVs['Cam1_TriggerMode'].put('Ext. Standard', wait=True)
-	sample_rot = float(variableDict['SampleStartPos'])
-	for i in range(int(variableDict['Projections'])):
-	#while sample_rot <= end_pos:
-		print 'Sample Rot:', sample_rot
-		global_PVs['Motor_SampleRot'].put(sample_rot, wait=True)
+	for angle in theta:
+		print 'Sample Rot:', angle 
+		global_PVs['Motor_SampleRot'].put(angle, wait=True)
 		if int(variableDict['UseInterferometer']) > 0:
 			global_PVs['Interferometer_Acquire'].put(1)
 			interf_arr += [global_PVs['Interferometer_Val'].get()]
 		print 'Stabilize Sleep (ms)', variableDict['StabilizeSleep_ms']
 		time.sleep(float(variableDict['StabilizeSleep_ms']) / 1000.0)
 		# save theta to array
-		theta += [sample_rot]
 		# start detector acquire
 		if variableDict['Recursive_Filter_Enabled'] == 1:
 			global_PVs['Proc1_Callbacks'].put('Enable', wait=True)
@@ -94,7 +93,6 @@ def tomo_scan():
 		# wait for acquire to finish
 		wait_pv(global_PVs['Cam1_Acquire'], DetectorIdle, 60)
 		# update sample rotation
-		sample_rot += step_size
 	# set trigger move to internal for post dark and white
 	#global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
 	#if int(variableDict['ExternalShutter']) == 1:
