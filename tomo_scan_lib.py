@@ -164,6 +164,13 @@ def reset_writer(global_PVs, variableDict):
 	global_PVs['TIFF1_Capture'].put(0)
 	global_PVs['HDF1_Capture'].put(0)
 	wait_pv(global_PVs['HDF1_Capture'], 0)
+	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
+	global_PVs['Cam1_TriggerMode'].put('Overlapped', wait=True)
+	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
+	global_PVs['Proc1_Filter_Callbacks'].put( 'Every array' )
+	global_PVs['HDF1_ArrayPort'].put(global_PVs['Proc1_ArrayPort'].get())
+	global_PVs['Cam1_ImageMode'].put('Continuous', wait=True)
+	global_PVs['Cam1_Acquire'].put(DetectorAcquire); wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
 
 def setup_detector(global_PVs, variableDict):
 	print 'setup_detector()'
