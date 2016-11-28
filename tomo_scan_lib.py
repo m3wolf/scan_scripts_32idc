@@ -11,7 +11,6 @@ import shutil
 import os
 import imp
 import traceback
-import numpy
 
 ShutterA_Open_Value = 0
 ShutterA_Close_Value = 1
@@ -23,7 +22,7 @@ FrameTypeWhite = 2
 DetectorIdle = 0
 DetectorAcquire = 1
 UseShutterA = 0
-UseShutterB = 0
+UseShutterB = 1
 PG_Trigger_External_Trigger = 1
 Recursive_Filter_Type = 'RecursiveAve'
 
@@ -80,6 +79,7 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['HDF1_FileWriteMode'] = PV(variableDict['IOC_Prefix'] + 'HDF1:FileWriteMode')
 	global_PVs['HDF1_NumCapture'] = PV(variableDict['IOC_Prefix'] + 'HDF1:NumCapture')
 	global_PVs['HDF1_Capture'] = PV(variableDict['IOC_Prefix'] + 'HDF1:Capture')
+	global_PVs['HDF1_Capture_RBV'] = PV(variableDict['IOC_Prefix'] + 'HDF1:Capture_RBV')
 	global_PVs['HDF1_FullFileName_RBV'] = PV(variableDict['IOC_Prefix'] + 'HDF1:FullFileName_RBV')
 	global_PVs['HDF1_ArrayPort'] = PV(variableDict['IOC_Prefix'] + 'HDF1:NDArrayPort')
 
@@ -87,7 +87,7 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['Motor_SampleX'] = PV('32idcTXM:mcs:c1:m2.VAL')
 	global_PVs['Motor_SampleY'] = PV('32idcTXM:xps:c1:m7.VAL')
 	global_PVs['Motor_SampleRot'] = PV('32idcTXM:hydra:c0:m1.VAL')
-	#global_PVs['Motor_SampleZ'] = PV('32idcTXM:xps:c1:m8.VAL')
+	global_PVs['Motor_SampleZ'] = PV('32idcTXM:mcs:c1:m1.VAL')
 
 	#shutter pv's
 	global_PVs['ShutterA_Open'] = PV('32idb:rshtrA:Open')
@@ -195,8 +195,9 @@ def setup_writer(global_PVs, variableDict, filename=None):
 	print 'setup_writer()'
 	if variableDict.has_key('Recursive_Filter_Enabled'):
 		if variableDict['Recursive_Filter_Enabled'] == 1:
-			global_PVs['Proc1_Callbacks'].put('Disable')
-			global_PVs['Proc1_Filter_Enable'].put('Enable')
+#			global_PVs['Proc1_Callbacks'].put('Disable')
+			global_PVs['Proc1_Callbacks'].put('Enable')
+			global_PVs['Proc1_Filter_Enable'].put('Disable')
 			global_PVs['HDF1_ArrayPort'].put('PROC1')
 			global_PVs['Proc1_Filter_Type'].put( Recursive_Filter_Type )
 			global_PVs['Proc1_Num_Filter'].put( int( variableDict['Recursive_Filter_N_Images'] ) )
@@ -204,13 +205,13 @@ def setup_writer(global_PVs, variableDict, filename=None):
 			global_PVs['Proc1_AutoReset_Filter'].put( 'Yes' )
 			global_PVs['Proc1_Filter_Callbacks'].put( 'Array N only' )
 		else:
-			global_PVs['Proc1_Callbacks'].put('Disable')
+#			global_PVs['Proc1_Callbacks'].put('Disable')
 			global_PVs['Proc1_Filter_Enable'].put('Disable')
-			global_PVs['HDF1_ArrayPort'] = global_PVs['Proc1_ArrayPort'].get()
+			global_PVs['HDF1_ArrayPort'].put(global_PVs['Proc1_ArrayPort'].get())
 	else:
-		global_PVs['Proc1_Callbacks'].put('Disable')
+#		global_PVs['Proc1_Callbacks'].put('Disable')
 		global_PVs['Proc1_Filter_Enable'].put('Disable')
-		global_PVs['HDF1_ArrayPort'] = global_PVs['Proc1_ArrayPort'].get()
+		global_PVs['HDF1_ArrayPort'].put(global_PVs['Proc1_ArrayPort'].get())
 	global_PVs['HDF1_AutoSave'].put('Yes')
 	global_PVs['HDF1_DeleteDriverFile'].put('No')
 	global_PVs['HDF1_EnableCallbacks'].put('Enable')
@@ -249,18 +250,16 @@ def move_sample_in(global_PVs, variableDict):
 	print 'move_sample_in()'
 	global_PVs['Motor_SampleX'].put(float(variableDict['SampleXIn']), wait=True)
 #	global_PVs['Motor_SampleY'].put(float(variableDict['SampleYIn']), wait=True)
-#	print 'sleeping zzzzzz'
-#	time.sleep(15)
-#	print 'sleep over'
+	global_PVs['Motor_SampleZ'].put(float(variableDict['SampleZIn']), wait=True)
+	global_PVs['Motor_SampleRot'].put(float(variableDict['SampleStart_Rot']), wait=True)
 
 
 def move_sample_out(global_PVs, variableDict):
 	print 'move_sample_out()'
+	global_PVs['Motor_SampleRot'].put(float(variableDict['SampleRotOut']), wait=True)
 	global_PVs['Motor_SampleX'].put(float(variableDict['SampleXOut']), wait=True)
 	#global_PVs['Motor_SampleY'].put(float(variableDict['SampleYOut']), wait=True)
-#	print 'sleeping zzzzzz'
-#	time.sleep(15)
-#	print 'sleep over'
+	global_PVs['Motor_SampleZ'].put(float(variableDict['SampleZOut']), wait=True)
 
 def open_shutters(global_PVs, variableDict):
 	print 'open_shutters()'
@@ -297,12 +296,14 @@ def add_theta(global_PVs, variableDict, theta_arr):
 
 def add_extra_hdf5(global_PVs, variableDict, theta_arr, interf_arrs):
 	print 'add_extra_hdf5()'
+	wait_pv(global_PVs['HDF1_Capture_RBV'], 0, 10.0)
 	fullname = global_PVs['HDF1_FullFileName_RBV'].get(as_string=True)
 	try:
+		print 'Opening hdf5 file ',fullname
 		hdf_f = h5py.File(fullname, mode='a')
 		theta_ds = hdf_f.create_dataset('/exchange/theta', (len(theta_arr),))
 		theta_ds[:] = theta_arr[:]
-		if int(variableDict['UseInterferometer']) > 0:
+		if variableDict.has_key('UseInterferometer') and int(variableDict['UseInterferometer']) > 0:
 			interf_ds = hdf_f.create_dataset('/exchange/interferometer', (len(interf_arrs), len(interf_arrs[0])), dtype='f' )
 			for i in range(len(interf_arrs)):
 				if len(interf_arrs[i]) == len(interf_arrs[0]):
@@ -353,24 +354,5 @@ def move_energy(energy, global_PVs, variableDict):
 	global_PVs['GAPputEnergy'].put(energy + float(variableDict['Offset']))
 	wait_pv(global_PVs['EnergyWait'], 0)
 	global_PVs['DCMmvt'].put(0)
-
-def gen_theta_list(start, end, proj, div):
-	print 'gen_theta_list()'
-	theta = []
-	full_list = numpy.linspace(start, end, num=proj)
-	print 'full list = ',full_list
-	s = 0
-	while len(full_list) > 0:
-		theta += [full_list[s]]
-		full_list = numpy.delete(full_list, s)
-		jump = len(full_list) / int(div)
-		s += jump
-		if s >= len(full_list):
-			s = 0
-	sidx = theta.index(end)
-	save_val = theta[int(div)-1]
-	theta[int(div) - 1] = end
-	theta[sidx] = save_val
-	return theta
 
 
