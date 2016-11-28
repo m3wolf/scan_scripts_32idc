@@ -67,6 +67,9 @@ def fly_scan():
 	print 'fly_scan()'
 	theta = []
 	global_PVs['Reset_Theta'].put(1)
+    if variableDict.has_key('StopTheScan'):
+        reset_writer()
+        return
 	# setup fly scan macro
 	delta = ((float(variableDict['SampleEndPos']) - float(variableDict['SampleStartPos'])) / (float(variableDict['Projections']) ))
 	# slew_speed = (end - start) / (proj * (exposure + ccd_readout))

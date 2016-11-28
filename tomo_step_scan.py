@@ -144,6 +144,9 @@ def mirror_fly_scan(rev=False):
 def full_tomo_scan():
 	print 'start_scan()'
 	init_general_PVs(global_PVs, variableDict)
+	if variableDict.has_key('StopTheScan'):
+		reset_writer()
+		return
 	#collect interferometer
 	interf_arrs = []
 	if variableDict.has_key('UseInterferometer') and int(variableDict['UseInterferometer']) > 0:
