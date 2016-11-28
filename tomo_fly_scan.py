@@ -67,9 +67,6 @@ def fly_scan():
 	print 'fly_scan()'
 	theta = []
 	global_PVs['Reset_Theta'].put(1)
-    if variableDict.has_key('StopTheScan'):
-        reset_writer()
-        return
 	# setup fly scan macro
 	delta = ((float(variableDict['SampleEndPos']) - float(variableDict['SampleStartPos'])) / (float(variableDict['Projections']) ))
 	# slew_speed = (end - start) / (proj * (exposure + ccd_readout))
@@ -106,6 +103,9 @@ def fly_scan():
 def start_scan():
 	print 'start_scan()'
 	init_general_PVs(global_PVs, variableDict)
+	if variableDict.has_key('StopTheScan'):
+		reset_writer(global_PVs, variableDict)
+		return
 	get_calculated_num_projections()
 	global_PVs['Fly_ScanControl'].put('Custom')
 	# Start scan sleep in min so min * 60 = sec

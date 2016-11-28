@@ -145,7 +145,7 @@ def full_tomo_scan():
 	print 'start_scan()'
 	init_general_PVs(global_PVs, variableDict)
 	if variableDict.has_key('StopTheScan'):
-		reset_writer()
+		reset_writer(global_PVs, variableDict)
 		return
 	#collect interferometer
 	interf_arrs = []
