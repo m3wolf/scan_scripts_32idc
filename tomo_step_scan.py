@@ -31,8 +31,8 @@ variableDict = {'PreDarkImages': 5,
 		'SampleXIn': 0.0,
 #		'SampleYIn': 0.1,
 		'SampleZIn': 0.0,
-		'SampleStart_Rot': 2.0,
-		'SampleEnd_Rot': 138.0,
+		'SampleStart_Rot': 16.0,
+		'SampleEnd_Rot': 152.0,
 		'StartSleep_min': 0,
 		'StabilizeSleep_ms': 0,
 		'ExposureTime': 1,
@@ -42,7 +42,7 @@ variableDict = {'PreDarkImages': 5,
 		'FileWriteMode': 'Stream',
 		'rot_speed_deg_per_s': 1,
 		'Recursive_Filter_Enabled': 0,
-		'Recursive_Filter_N_Images': 2,
+		'Recursive_Filter_N_Images': 2
 #		'Recursive_Filter_Type': 'RecursiveAve',
 		#'UseInterferometer': 0
 		}
@@ -145,7 +145,7 @@ def full_tomo_scan():
 	print 'start_scan()'
 	init_general_PVs(global_PVs, variableDict)
 	if variableDict.has_key('StopTheScan'):
-		reset_writer(global_PVs, variableDict)
+		stop_scan(global_PVs, variableDict)
 		return
 	#collect interferometer
 	interf_arrs = []
@@ -183,14 +183,7 @@ def full_tomo_scan():
 	#if int(variableDict['ExternalShutter']) == 1:
 	#	global_PVs['SetSoftGlueForStep'].put('0')
 	add_extra_hdf5(global_PVs, variableDict, theta, interf_arrs)	
-	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
-	global_PVs['Cam1_TriggerMode'].put('Overlapped', wait=True)
-	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
-	global_PVs['Proc1_Filter_Callbacks'].put( 'Every array' )
-	global_PVs['HDF1_ArrayPort'].put(global_PVs['Proc1_ArrayPort'].get())
-	global_PVs['Cam1_ImageMode'].put('Continuous', wait=True)
-	global_PVs['Cam1_Acquire'].put(DetectorAcquire); wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
-
+	reset_CCD(global_PVs, variableDict)
 	#move_dataset_to_run_dir()
 
 

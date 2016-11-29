@@ -159,11 +159,14 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['EnergyWait'] = PV('ID32us:Busy')
 	global_PVs['DCMputEnergy'] = PV('32ida:BraggEAO.VAL')
 
-def reset_writer(global_PVs, variableDict):
+def stop_scan(global_PVs, variableDict):
 	global_PVs['TIFF1_AutoSave'].put('No')
 	global_PVs['TIFF1_Capture'].put(0)
 	global_PVs['HDF1_Capture'].put(0)
 	wait_pv(global_PVs['HDF1_Capture'], 0)
+	reset_CCD(global_PVs, variableDict)
+
+def reset_CCD(global_PVs, variableDict):
 	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
 	global_PVs['Cam1_TriggerMode'].put('Overlapped', wait=True)
 	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)

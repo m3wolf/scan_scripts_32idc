@@ -104,7 +104,7 @@ def start_scan():
 	print 'start_scan()'
 	init_general_PVs(global_PVs, variableDict)
 	if variableDict.has_key('StopTheScan'):
-		reset_writer(global_PVs, variableDict)
+		stop_scan(global_PVs, variableDict)
 		return
 	get_calculated_num_projections()
 	global_PVs['Fly_ScanControl'].put('Custom')
@@ -138,9 +138,7 @@ def start_scan():
 	time.sleep(0.25)
 	add_theta(global_PVs, variableDict, theta)
 	global_PVs['Fly_ScanControl'].put('Standard')
-	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
-	global_PVs['Cam1_TriggerMode'].put('Overlapped', wait=True)
-	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
+	reset_CCD(global_PVs, variableDict)
 	#move_dataset_to_run_dir(global_PVs, variableDict)
 
 
