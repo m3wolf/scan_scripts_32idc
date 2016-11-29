@@ -88,6 +88,8 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['Motor_SampleY'] = PV('32idcTXM:xps:c1:m7.VAL')
 	global_PVs['Motor_SampleRot'] = PV('32idcTXM:hydra:c0:m1.VAL')
 	global_PVs['Motor_SampleZ'] = PV('32idcTXM:mcs:c1:m1.VAL')
+	global_PVs['Motor_X_Tile'] = PV('32idc02:m31.VAL')
+	global_PVs['Motor_Y_Tile'] = PV('32idc02:m15.VAL')
 
 	#shutter pv's
 	global_PVs['ShutterA_Open'] = PV('32idb:rshtrA:Open')

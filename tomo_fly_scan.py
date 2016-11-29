@@ -100,7 +100,7 @@ def fly_scan():
 	return theta
 
 
-def start_scan():
+def start_scan(detector_filename):
 	print 'start_scan()'
 	init_general_PVs(global_PVs, variableDict)
 	if variableDict.has_key('StopTheScan'):
@@ -111,7 +111,7 @@ def start_scan():
 	# Start scan sleep in min so min * 60 = sec
 	time.sleep(float(variableDict['StartSleep_min']) * 60.0)
 	setup_detector(global_PVs, variableDict)
-	setup_writer(global_PVs, variableDict)
+	setup_writer(global_PVs, variableDict, detector_filename)
 	if int(variableDict['PreDarkImages']) > 0:
 		close_shutters(global_PVs, variableDict)
 		print 'Capturing Pre Dark Field'
@@ -126,6 +126,7 @@ def start_scan():
 	open_shutters(global_PVs, variableDict)
 	# run fly scan
 	theta = fly_scan()
+	###wait_pv(global_PVs['HDF1_NumCaptured'], expected_num_cap, 60)
 	if int(variableDict['PostWhiteImages']) > 0:
 		print 'Capturing Post White Field'
 		move_sample_out(global_PVs, variableDict)
@@ -136,9 +137,12 @@ def start_scan():
 		capture_multiple_projections(global_PVs, variableDict, int(variableDict['PostDarkImages']), FrameTypeDark)
 	close_shutters(global_PVs, variableDict)
 	time.sleep(0.25)
+	wait_pv(global_PVs["HDF1_Capture_RBV"], 0, 600)
 	add_theta(global_PVs, variableDict, theta)
 	global_PVs['Fly_ScanControl'].put('Standard')
-	reset_CCD(global_PVs, variableDict)
+	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
+	global_PVs['Cam1_TriggerMode'].put('Overlapped', wait=True)
+	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
 	#move_dataset_to_run_dir(global_PVs, variableDict)
 
 
