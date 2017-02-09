@@ -42,10 +42,7 @@ variableDict = {'PreDarkImages': 5,
 #		'ExternalShutter': 0,
 		'FileWriteMode': 'Stream',
 		'Interlaced': 0,
-		'Interlaced_Cycles': 0,
-		'Interlaced_Num_Revs': 0,
-		'Interlaced_Min_Acq_Time': 0,
-		'Interlaced_Slew_Speed': 0,
+		'Interlaced_Sub_Cycles': 4,
 		'rot_speed_deg_per_s': 0.5,
 		'Recursive_Filter_Enabled': 0,
 		'Recursive_Filter_N_Images': 2,
@@ -60,14 +57,12 @@ def getVariableDict():
 	return variableDict
 
 def gen_interlaced_theta():
-	global_PVs['Interlaced_Num_Cycles'].put(int(variableDict['Interlaced_Cycles']), wait=True)
-	#global_PVs['Interlaced_Num_Cycles_RBV']
+	#set num cycles to 1 so we only do 1 scan
+	global_PVs['Interlaced_Num_Cycles'].put(1, wait=True)
 	global_PVs['Interlaced_Images_Per_Cycle'].put(int(variableDict['Projections']), wait=True)
 	#global_PVs['Interlaced_Images_Per_Cycle_RBV']
-	global_PVs['Interlaced_Num_Revs'].put(int(variableDict['Interlaced_Num_Revs']), wait=True)
+	global_PVs['Interlaced_Num_Sub_Cycles'].put(int(variableDict['Interlaced_Sub_Cycles']), wait=True)
 	#global_PVs['Interlaced_Num_Revs_RBV']
-	global_PVs['Interlaced_Min_Aqc_Time'].put(int(variableDict['Interlaced_Min_Acq_Time']), wait=True)
-	global_PVs['Interlaced_Slew_Speed'].put(int(variableDict['Interlaced_Slew_Speed']), wait=True)
 	#proc
 	global_PVs['Interlaced_PROC'].put(1, wait=True)
 	theta_arr = global_PVs['Interlaced_Theta_Arr'].get(int(variableDict['Projections']))

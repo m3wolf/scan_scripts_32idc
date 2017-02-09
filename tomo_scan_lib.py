@@ -22,7 +22,7 @@ FrameTypeWhite = 2
 DetectorIdle = 0
 DetectorAcquire = 1
 UseShutterA = 0
-UseShutterB = 1
+UseShutterB = 0
 PG_Trigger_External_Trigger = 1
 Recursive_Filter_Type = 'RecursiveAve'
 
@@ -171,10 +171,8 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['Interlaced_Num_Cycles_RBV'] = PV('32idcTXM:iFly:interlaceFlySub.VALH')
 	global_PVs['Interlaced_Images_Per_Cycle'] = PV('32idcTXM:iFly:interlaceFlySub.A')
 	global_PVs['Interlaced_Images_Per_Cycle_RBV'] = PV('32idcTXM:iFly:interlaceFlySub.VALF')
-	global_PVs['Interlaced_Num_Revs'] = PV('32idcTXM:iFly:interlaceFlySub.B')
-	global_PVs['Interlaced_Num_Revs_RBV'] = PV('32idcTXM:iFly:interlaceFlySub.VALG')
-	global_PVs['Interlaced_Min_Aqc_Time'] = PV('32idcTXM:iFly:interlaceFlySub.E')
-	global_PVs['Interlaced_Slew_Speed'] = PV('32idcTXM:eFly:slewSpeed')
+	global_PVs['Interlaced_Num_Sub_Cycles'] = PV('32idcTXM:iFly:interlaceFlySub.B')
+	global_PVs['Interlaced_Num_Sub_Cycles_RBV'] = PV('32idcTXM:iFly:interlaceFlySub.VALG')
 
 def stop_scan(global_PVs, variableDict):
 	global_PVs['TIFF1_AutoSave'].put('No')
