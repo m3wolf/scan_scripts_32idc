@@ -164,6 +164,18 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['EnergyWait'] = PV('ID32us:Busy')
 	global_PVs['DCMputEnergy'] = PV('32ida:BraggEAO.VAL')
 
+	#interlaced
+	global_PVs['Interlaced_PROC'] = PV('32idcTXM:iFly:interlaceFlySub.PROC')
+	global_PVs['Interlaced_Theta_Arr'] = PV('32idcTXM:iFly:interlaceFlySub.VALC')
+	global_PVs['Interlaced_Num_Cycles'] = PV('32idcTXM:iFly:interlaceFlySub.C')
+	global_PVs['Interlaced_Num_Cycles_RBV'] = PV('32idcTXM:iFly:interlaceFlySub.VALH')
+	global_PVs['Interlaced_Images_Per_Cycle'] = PV('32idcTXM:iFly:interlaceFlySub.A')
+	global_PVs['Interlaced_Images_Per_Cycle_RBV'] = PV('32idcTXM:iFly:interlaceFlySub.VALF')
+	global_PVs['Interlaced_Num_Revs'] = PV('32idcTXM:iFly:interlaceFlySub.B')
+	global_PVs['Interlaced_Num_Revs_RBV'] = PV('32idcTXM:iFly:interlaceFlySub.VALG')
+	global_PVs['Interlaced_Min_Aqc_Time'] = PV('32idcTXM:iFly:interlaceFlySub.E')
+	global_PVs['Interlaced_Slew_Speed'] = PV('32idcTXM:eFly:slewSpeed')
+
 def stop_scan(global_PVs, variableDict):
 	global_PVs['TIFF1_AutoSave'].put('No')
 	global_PVs['TIFF1_Capture'].put(0)
