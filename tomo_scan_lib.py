@@ -22,7 +22,7 @@ FrameTypeWhite = 2
 DetectorIdle = 0
 DetectorAcquire = 1
 UseShutterA = 0
-UseShutterB = 0
+UseShutterB = 1
 PG_Trigger_External_Trigger = 1
 Recursive_Filter_Type = 'RecursiveAve'
 

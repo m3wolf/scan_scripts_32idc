@@ -22,7 +22,7 @@ global variableDict
 
 variableDict = {'PreDarkImages': 5,
 		'PreWhiteImages': 5,
-		'Projections': 361,
+		'Projections': 720,
 		'ProjectionsPerRot': 1,
 		'PostDarkImages': 0,
 		'PostWhiteImages': 5,
@@ -71,9 +71,9 @@ def gen_interlaced_theta():
 
 def update_theta_for_more_proj(orig_theta):
 	new_theta = []
-	for i in range( orig_theta ):
+	for val in orig_theta:
 		for j in range( int(variableDict['ProjectionsPerRot']) ):
-			new_theta += orig_theta[i]
+			new_theta += [val]
 	return new_theta
 
 def tomo_scan():
@@ -86,7 +86,7 @@ def tomo_scan():
 	if variableDict.has_key('Interlaced') and int(variableDict['Interlaced']) > 0:
 		theta = gen_interlaced_theta()
 	else:
-		theta = numpy.arange(float(variableDict['SampleStart_Rot']), float(variableDict['SampleEnd_Rot']), step_size)
+		theta = numpy.arange(float(variableDict['SampleStart_Rot']), float(variableDict['SampleEnd_Rot'])+1, step_size)
 	#end_pos = float(variableDict['SampleEnd_Rot'])
 	global_PVs['Cam1_FrameType'].put(FrameTypeData, wait=True)
 	global_PVs['Cam1_NumImages'].put(1, wait=True)
@@ -121,6 +121,7 @@ def tomo_scan():
 				global_PVs['Cam1_Acquire'].put(DetectorAcquire)
 				wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
 				global_PVs['Cam1_SoftwareTrigger'].put(1)
+				wait_pv(global_PVs['Cam1_Acquire'], DetectorIdle, 60)
 		else:
 			global_PVs['Cam1_Acquire'].put(DetectorAcquire)
 			wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
