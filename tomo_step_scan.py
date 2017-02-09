@@ -23,6 +23,7 @@ global variableDict
 variableDict = {'PreDarkImages': 5,
 		'PreWhiteImages': 5,
 		'Projections': 361,
+		'ProjectionsPerRot': 1,
 		'PostDarkImages': 0,
 		'PostWhiteImages': 5,
 		'SampleXOut': 0.05,
@@ -68,6 +69,13 @@ def gen_interlaced_theta():
 	theta_arr = global_PVs['Interlaced_Theta_Arr'].get(int(variableDict['Projections']))
 	return theta_arr
 
+def update_theta_for_more_proj(orig_theta):
+	new_theta = []
+	for i in range( orig_theta ):
+		for j in range( int(variableDict['ProjectionsPerRot']) ):
+			new_theta += orig_theta[i]
+	return new_theta
+
 def tomo_scan():
 	print 'tomo_scan()'
 	theta = []
@@ -103,11 +111,16 @@ def tomo_scan():
 		# start detector acquire
 		if variableDict['Recursive_Filter_Enabled'] == 1:
 			global_PVs['Proc1_Callbacks'].put('Enable', wait=True)
-			for i in range(int(variableDict['Recursive_Filter_N_Images'])):
+			for k in range(int(variableDict['Recursive_Filter_N_Images'])):
 				global_PVs['Cam1_Acquire'].put(DetectorAcquire)
 				wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
 				global_PVs['Cam1_SoftwareTrigger'].put(1)
 				wait_pv(global_PVs['Cam1_Acquire'], DetectorIdle, 60)
+		elif variableDict['ProjectionsPerRot'] > 1:
+			for j in range( int(variableDict['ProjectionsPerRot']) ):
+				global_PVs['Cam1_Acquire'].put(DetectorAcquire)
+				wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
+				global_PVs['Cam1_SoftwareTrigger'].put(1)
 		else:
 			global_PVs['Cam1_Acquire'].put(DetectorAcquire)
 			wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
@@ -127,6 +140,8 @@ def tomo_scan():
 	#	global_PVs['SetSoftGlueForStep'].put('0')
 	if variableDict['Recursive_Filter_Enabled'] == 1:
 			global_PVs['Proc1_Filter_Enable'].put('Disable', wait=True)
+	if variableDict['ProjectionsPerRot'] > 1:
+		theta = update_theta_for_more_proj(theta)
 	return theta, interf_arr
 
 def mirror_fly_scan(rev=False):

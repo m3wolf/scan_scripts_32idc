@@ -247,7 +247,10 @@ def setup_writer(global_PVs, variableDict, filename=None):
 	global_PVs['HDF1_DeleteDriverFile'].put('No')
 	global_PVs['HDF1_EnableCallbacks'].put('Enable')
 	global_PVs['HDF1_BlockingCallbacks'].put('No')
-	totalProj = int(variableDict['PreDarkImages']) + int(variableDict['PreWhiteImages']) + int(variableDict['Projections']) + int(variableDict['PostDarkImages']) + int(variableDict['PostWhiteImages'])
+	if variableDict.has_key('ProjectionsPerRot'):
+		totalProj = int(variableDict['PreDarkImages']) + int(variableDict['PreWhiteImages']) + ( int(variableDict['Projections']) * int(variableDict['ProjectionsPerRot'])) + int(variableDict['PostDarkImages']) + int(variableDict['PostWhiteImages'])
+	else:
+		totalProj = int(variableDict['PreDarkImages']) + int(variableDict['PreWhiteImages']) + int(variableDict['Projections']) + int(variableDict['PostDarkImages']) + int(variableDict['PostWhiteImages'])
 	global_PVs['HDF1_NumCapture'].put(totalProj)
 	global_PVs['HDF1_FileWriteMode'].put(str(variableDict['FileWriteMode']), wait=True)
 	if not filename == None:
