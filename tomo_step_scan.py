@@ -20,33 +20,32 @@ global variableDict
 
 
 variableDict = {'PreDarkImages': 5,
-		'PreWhiteImages': 10,
-		'Projections': 545,
+		'PreWhiteImages': 5,
+		'Projections': 361,
 		'PostDarkImages': 0,
-		'PostWhiteImages': 10,
-		'SampleXOut': 0.0,
+		'PostWhiteImages': 5,
+		'SampleXOut': 0.05,
 #		'SampleYOut': 0.1,
-		'SampleZOut': 3,
-		'SampleRotOut': 90.0,
+#		'SampleZOut': 0,
+#		'SampleRotOut': 90.0,
 		'SampleXIn': 0.0,
 #		'SampleYIn': 0.1,
-		'SampleZIn': 0.0,
-		'SampleStart_Rot': 16.0,
-		'SampleEnd_Rot': 152.0,
+#		'SampleZIn': 0.0,
+		'SampleStart_Rot': 0.0,
+		'SampleEnd_Rot': 180.0,
 		'StartSleep_min': 0,
-		'StabilizeSleep_ms': 0,
-		'ExposureTime': 1,
+		'StabilizeSleep_ms': 1,
+		'ExposureTime': 3,
 #		'ShutterOpenDelay': 0.05,
 		'IOC_Prefix': '32idcPG3:',
 #		'ExternalShutter': 0,
 		'FileWriteMode': 'Stream',
-		'rot_speed_deg_per_s': 1,
+		'rot_speed_deg_per_s': 0.5,
 		'Recursive_Filter_Enabled': 0,
-		'Recursive_Filter_N_Images': 2
-#		'Recursive_Filter_Type': 'RecursiveAve',
-		#'UseInterferometer': 0
+		'Recursive_Filter_N_Images': 2,
+		'Recursive_Filter_Type': 'RecursiveAve'
+#		'UseInterferometer': 0
 		}
-
 
 global_PVs = {}
 
@@ -69,6 +68,7 @@ def tomo_scan():
 	sample_rot = float(variableDict['SampleStart_Rot'])
 	if variableDict['Recursive_Filter_Enabled'] == 1:
 		global_PVs['Proc1_Filter_Enable'].put('Enable')
+  
 	for i in range(int(variableDict['Projections'])):
 	#while sample_rot <= end_pos:
 		print 'Sample Rot:', sample_rot

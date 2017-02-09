@@ -80,15 +80,18 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['HDF1_NumCapture'] = PV(variableDict['IOC_Prefix'] + 'HDF1:NumCapture')
 	global_PVs['HDF1_Capture'] = PV(variableDict['IOC_Prefix'] + 'HDF1:Capture')
 	global_PVs['HDF1_Capture_RBV'] = PV(variableDict['IOC_Prefix'] + 'HDF1:Capture_RBV')
+	global_PVs['HDF1_FileName'] = PV(variableDict['IOC_Prefix'] + 'HDF1:FileName')
 	global_PVs['HDF1_FullFileName_RBV'] = PV(variableDict['IOC_Prefix'] + 'HDF1:FullFileName_RBV')
+	global_PVs['HDF1_FileTemplate'] = PV(variableDict['IOC_Prefix'] + 'HDF1:FileTemplate')
 	global_PVs['HDF1_ArrayPort'] = PV(variableDict['IOC_Prefix'] + 'HDF1:NDArrayPort')
 
 	#motor pv's
 	global_PVs['Motor_SampleX'] = PV('32idcTXM:mcs:c1:m2.VAL')
 	global_PVs['Motor_SampleY'] = PV('32idcTXM:xps:c1:m7.VAL')
-	global_PVs['Motor_SampleRot'] = PV('32idcTXM:hydra:c0:m1.VAL')
+#	global_PVs['Motor_SampleRot'] = PV('32idcTXM:hydra:c0:m1.VAL')
+	global_PVs['Motor_SampleRot'] = PV('32idcTXM:ens:c1:m1.VAL')
 	global_PVs['Motor_SampleZ'] = PV('32idcTXM:mcs:c1:m1.VAL')
-	global_PVs['Motor_X_Tile'] = PV('32idc02:m31.VAL')
+	global_PVs['Motor_X_Tile'] = PV('32idc01:m33.VAL')
 	global_PVs['Motor_Y_Tile'] = PV('32idc02:m15.VAL')
 
 	#shutter pv's
@@ -119,7 +122,7 @@ def init_general_PVs(global_PVs, variableDict):
 	#init misc pv's
 	global_PVs['Image1_Callbacks'] = PV(variableDict['IOC_Prefix'] + 'image1:EnableCallbacks')
 	global_PVs['ExternShutterExposure'] = PV('32idcTXM:shutCam:tExpose')
-	global_PVs['SetSoftGlueForStep'] = PV('32idcTXM:SG2:MUX2-1_SEL_Signal')
+	global_PVs['SetSoftGlueForStep'] = PV('32idcTXM:SG3:MUX2-1_SEL_Signal')
 	#global_PVs['ClearTheta'] = PV('32idcTXM:recPV:PV1_clear')
 	global_PVs['ExternShutterDelay'] = PV('32idcTXM:shutCam:tDly')
 	global_PVs['Interferometer'] = PV('32idcTXM:SG2:UpDnCntr-1_COUNTS_s')
@@ -181,7 +184,7 @@ def setup_detector(global_PVs, variableDict):
 	print 'setup_detector()'
 	global_PVs['Cam1_ImageMode'].put('Multiple')
 	global_PVs['Cam1_ArrayCallbacks'].put('Enable')
-	global_PVs['Image1_Callbacks'].put('Enable')
+	#global_PVs['Image1_Callbacks'].put('Enable')
 	global_PVs['Cam1_AcquirePeriod'].put(float(variableDict['ExposureTime']))
 	global_PVs['Cam1_AcquireTime'].put(float(variableDict['ExposureTime']))
 	# if we are using external shutter then set the exposure time
@@ -266,18 +269,21 @@ def capture_multiple_projections(global_PVs, variableDict, num_proj, frame_type)
 
 def move_sample_in(global_PVs, variableDict):
 	print 'move_sample_in()'
+#	global_PVs['Motor_X_Tile'].put(float(variableDict['SampleXIn']), wait=True)
 	global_PVs['Motor_SampleX'].put(float(variableDict['SampleXIn']), wait=True)
 #	global_PVs['Motor_SampleY'].put(float(variableDict['SampleYIn']), wait=True)
-	global_PVs['Motor_SampleZ'].put(float(variableDict['SampleZIn']), wait=True)
-	global_PVs['Motor_SampleRot'].put(float(variableDict['SampleStart_Rot']), wait=True)
+#	global_PVs['Motor_SampleZ'].put(float(variableDict['SampleZIn']), wait=True)
+	global_PVs['Motor_SampleRot'].put(0, wait=True)
 
 
 def move_sample_out(global_PVs, variableDict):
 	print 'move_sample_out()'
-	global_PVs['Motor_SampleRot'].put(float(variableDict['SampleRotOut']), wait=True)
+#	global_PVs['Motor_SampleRot'].put(float(variableDict['SampleRotOut']), wait=True)
+#	global_PVs['Motor_X_Tile'].put(float(variableDict['SampleXOut']), wait=True)
 	global_PVs['Motor_SampleX'].put(float(variableDict['SampleXOut']), wait=True)
-	#global_PVs['Motor_SampleY'].put(float(variableDict['SampleYOut']), wait=True)
-	global_PVs['Motor_SampleZ'].put(float(variableDict['SampleZOut']), wait=True)
+#	global_PVs['Motor_SampleY'].put(float(variableDict['SampleYOut']), wait=True)
+#	global_PVs['Motor_SampleZ'].put(float(variableDict['SampleZOut']), wait=True)
+	global_PVs['Motor_SampleRot'].put(0, wait=True)
 
 def open_shutters(global_PVs, variableDict):
 	print 'open_shutters()'
@@ -374,3 +380,80 @@ def move_energy(energy, global_PVs, variableDict):
 	global_PVs['DCMmvt'].put(0)
 
 
+
+########################## Interlaced #########################
+def bitreversed_decimal(dec_input, maxbits):
+# Description: Compute bit-reversed value of a decimal number 
+# Inputs:
+# in - Decimal input whose bit-reversed value must be computed
+# maxbits - Total number of bits in binary used to represent 'in' and 'out'.
+# Ouputs:
+# out - Bit-reversed value of 'in'.
+
+    if maxbits == 0:
+        bit_rev = 0
+        return
+
+#    dec_input = bin(dec_input, maxbits)
+    dec_input = int(dec_input)
+    maxbits = int(maxbits)
+    
+    dec_input = bin(dec_input)
+    dec_input = dec_input[2:]
+    if len(dec_input)<maxbits:
+        dec_input = '0'*(maxbits-len(dec_input))+dec_input
+#    bit_rev = '0'*maxbits
+    bit_rev = str('')
+    for i in range(0,maxbits):
+#        print('  ** Loop #',i)
+#        print('       maxbits: ', maxbits)
+#        print('       dec_input', dec_input)
+        bit_rev = bit_rev + dec_input[maxbits-1-i]
+#        print('       bit_rev: ', bit_rev)
+    
+    bit_rev = int(bit_rev,2)
+
+    return bit_rev
+    
+
+def gen_interlaced_views(N, K, N_p):
+# Description: Generate interlaced view angles
+# Formula: the_views[n] = [(n mod(N/K))K + Br(floor(nK/N) mod(K))]*pi/N;
+#          mod denotes modulo, floor gives the lowest integer value, Br denotes bit-reversal 
+# Input: 
+# N - Total number of distinct view angles in a frame
+# K - Number of interlaced sub-frames in each frame
+# N_p - Total number of view angles (Note that angles repeat from frame to frame)
+# Output:
+# the_views - Interlaced view angles
+
+    k = int(np.log2(K))
+    L = N/K # Number of equi-spaced view angles in a sub-frame
+    delta_theta = 180/N # Determines scaling of output
+    
+#    print(k, L, K)
+    
+    the_views = np.zeros((N_p))
+    buf1 = np.zeros((N_p))
+    buf2 = np.zeros((N_p))
+    
+    for i in range(0,N_p):
+#        print('**** Main loop #', i)
+        buf1[i] = np.mod(i,L)*K
+        buf2[i] = bitreversed_decimal(np.mod(np.floor(i/L), K), k)
+        the_views[i] = buf1[i] + buf2[i]
+        the_views[i] = the_views[i]*delta_theta
+    
+    return the_views
+
+
+## Example:
+#N_theta = 16 # Total number of distinct view angles in a frame
+#K = 4 # Number of interlaced sub-frames in each frame
+#N_p = 32 # Total number of view angles (Note that angles repeat from frame to frame)
+
+#the_views = gen_interlaced_views(N_theta, K, N_p)
+#
+#X = np.linspace(0,N_p-1)
+##plt.plot(X, the_views, 'o'), plt.plot(the_views, 'ro'), plt.plot(the_views, 'b-'), plt.grid(), plt.xlabel('View index'), plt.ylabel('View angle (degrees)'), plt.title('Interlaced views'), plt.show()
+########################## Interlaced #########################

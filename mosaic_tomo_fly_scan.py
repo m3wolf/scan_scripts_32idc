@@ -30,8 +30,8 @@ variableDict = {'PreDarkImages': 5,
                 'SampleEndPos': 180.0,
                 'StartSleep_min': 0,
                 #'StabilizeSleep_ms': 1000,
-                'ExposureTime': 0.08,
-                'CCD_Readout': 0.016,
+                'ExposureTime': 0.2,
+                'CCD_Readout': 0.27,
                 'IOC_Prefix': '32idcPG3:',
                 'FileWriteMode': 'Stream',
                 'X_Start': -3.2,
@@ -45,17 +45,18 @@ variableDict = {'PreDarkImages': 5,
                 'UseInterferometer': 0
                 }
 
+
 global_PVs = {}
 
 def getVariableDict():
 	return variableDict
 
 def main():
-	update_variable_dict(variableDict)
+    update_variable_dict(variableDict)
     init_general_PVs(global_PVs, variableDict)
-	if variableDict.has_key('StopTheScan'):
-		stop_scan(global_PVs, variableDict)
-		return
+    if variableDict.has_key('StopTheScan'):
+        stop_scan(global_PVs, variableDict)
+        return
     global_PVs['Fly_ScanControl'].put('Custom')
     FileName = global_PVs['HDF1_FileName'].get(as_string=True)
     FileTemplate = global_PVs['HDF1_FileTemplate'].get(as_string=True)
@@ -83,7 +84,7 @@ def main():
             time.sleep(float(variableDict['MosaicMoveSleep']))
             #wait_pv(global_PVs["Motor_X_Tile"], x_val, 600)
             x_val += x_itr
-            tomo_fly_scan.start_scan(FileName+'_y' + str(y) + '_x' + str(x) )
+            tomo_fly_scan.start_scan(variableDict, FileName+'_y' + str(y) + '_x' + str(x) )
     global_PVs['Fly_ScanControl'].put('Standard')
     global_PVs['HDF1_FileName'].put(FileName)
     global_PVs['HDF1_FileTemplate'].put('%s%s_%3.3d.h5')
