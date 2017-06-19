@@ -16,12 +16,13 @@ from tomo_scan_lib import *
 
 global variableDict
 
-variableDict = {'PreDarkImages': 5,
+variableDict = {'nCycles': 400, # number of tomoscan to be acquired
+		'PreDarkImages': 0,
 		'PreWhiteImages': 10,
-		'Projections': 3000,
-		'PostDarkImages': 5,
-		'PostWhiteImages': 10,
-		'SampleXOut': 4,
+		'Projections': 180,
+		'PostDarkImages': 0,
+		'PostWhiteImages': 0,
+		'SampleXOut': 0.5,
 		'SampleYOut': 0.0,
 		'SampleZOut': 0.0,
 		'SampleXIn': 0.0,
@@ -31,12 +32,12 @@ variableDict = {'PreDarkImages': 5,
 		'SampleEndPos': 180.0,
 		'StartSleep_min': 0,
 		'StabilizeSleep_ms': 0,
-		'ExposureTime': 0.1,
-		'ExposureTime_Flat': 0.1,
+		'ExposureTime': 0.4,
+		'ExposureTime_Flat': 0.4,
 		'IOC_Prefix': '32idcPG3:',
 		'FileWriteMode': 'Stream',
-		'CCD_Readout': 0.14,
-		'Display_live': 0
+		'CCD_Readout': 0.04,
+		'Display_live': 1
 #		'UseInterferometer': 0,
 		#'ExternalShutter': 0,
 		#'Ext_ShutterOpenDelay': 5.00,
@@ -160,8 +161,23 @@ def start_scan(variableDict, detector_filename):
 def main():
 	update_variable_dict(variableDict)
 	init_general_PVs(global_PVs, variableDict)
+    
+    	if variableDict.has_key('StopTheScan'): # need to add it in the loop??
+		stop_scan(global_PVs, variableDict)
+		return
+
 	FileName = global_PVs['HDF1_FileName'].get(as_string=True)
-	start_scan(variableDict, FileName)
+
+	global_PVs['HDF1_NextFile'].put(0)
+	for iCycle in range(0,variableDict['nCycles']):
+		start_scan(variableDict, FileName)
+#		SampleStartPos = variableDict['SampleStartPos']
+#		SampleEndPos = variableDict['SampleEndPos']
+#		variableDict['SampleStartPos'] = SampleEndPos
+#		variableDict['SampleEndPos'] = SampleStartPos
+#		print('  --> new SampleStart_Rot = %3.3f deg') % variableDict['SampleStartPos']
+#		print('  --> new SampleEnd_Rot = %3.3f deg') % variableDict['SampleEndPos']
+
 
 
 if __name__ == '__main__':

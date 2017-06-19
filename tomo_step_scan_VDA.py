@@ -15,35 +15,39 @@ import numpy
 
 from tomo_scan_lib import *
 
+
 global variableDict
 
-variableDict = {'PreDarkImages': 4,
-		'PreWhiteImages': 10,
-		'Projections': 1201,
+
+
+variableDict = {'PreDarkImages': 10,
+		'PreWhiteImages': 50,
+		'Projections': 12001,
 		'ProjectionsPerRot': 1, # saving several images / angle
-		'PostDarkImages': 0,
-		'PostWhiteImages': 10,
-		'SampleXOut': 0.3,
+		'PostDarkImages': 10,
+		'PostWhiteImages': 50,
+		'SampleXOut': 12,
 #		'SampleYOut': 0.1,
 #		'SampleZOut': 0,
-		'SampleRotOut': 00.0,
+#		'SampleRotOut': 90.0,
 		'SampleXIn': 0.0,
 #		'SampleYIn': 0.1,
 #		'SampleZIn': 0.0,
 		'SampleStart_Rot': 0.0,
-		'SampleEnd_Rot': 180.0,
+		'SampleEnd_Rot': 360.0,
 		'StartSleep_min': 0,
-		'StabilizeSleep_ms': 20,
-		'ExposureTime': 3.9,
+		'StabilizeSleep_ms': 0,
+		'ExposureTime': 0.03,
+		'ExposureTime_Flat': 0.15,
 		'IOC_Prefix': '32idcPG3:',
 		'FileWriteMode': 'Stream',
 		'Interlaced': 0,
 		'Interlaced_Sub_Cycles': 4,
-		'rot_speed_deg_per_s': 0.5,
+		'rot_speed_deg_per_s': 2,
 		'Recursive_Filter_Enabled': 0,
 		'Recursive_Filter_N_Images': 2,
 		'Recursive_Filter_Type': 'RecursiveAve',
-		'Display_live': 1
+		'Display_live': 0
 #		'ExternalShutter': 0,
 #		'Ext_ShutterOpenDelay': 0.05,
 #		'UseInterferometer': 0
@@ -88,19 +92,11 @@ def tomo_scan():
 	interf_arr = []
 	if variableDict.has_key('UseInterferometer') and int(variableDict['UseInterferometer']) > 0:
 		global_PVs['Interferometer_Mode'].put('ONE-SHOT')
-	if float(variableDict['Projections'])<=1:
-		step_size = 0
-	else:
-		step_size = ((float(variableDict['SampleEnd_Rot']) - float(variableDict['SampleStart_Rot'])) / (float(variableDict['Projections']) - 1.0))
-
+	step_size = ((float(variableDict['SampleEnd_Rot']) - float(variableDict['SampleStart_Rot'])) / (float(variableDict['Projections']) - 1.0))
 	if variableDict.has_key('Interlaced') and int(variableDict['Interlaced']) > 0:
 		theta = gen_interlaced_theta()
 	else:
-		if step_size == 0:
-			theta = 0
-		else:
-			theta = numpy.arange(float(variableDict['SampleStart_Rot']), float(variableDict['SampleStart_Rot']) + float(variableDict['Projections'])*step_size, step_size)
-            
+		theta = numpy.arange(float(variableDict['SampleStart_Rot']), float(variableDict['Projections'])*step_size, step_size)
 	#end_pos = float(variableDict['SampleEnd_Rot'])
 	global_PVs['Cam1_FrameType'].put(FrameTypeData, wait=True)
 	global_PVs['Cam1_NumImages'].put(1, wait=True)
@@ -146,7 +142,7 @@ def tomo_scan():
 		#	#time.sleep(float(variableDict['rest_time']))
 		#	global_PVs['ExternalShutter_Trigger'].put(1, wait=True)
 		# wait for acquire to finish
-		wait_pv(global_PVs['Cam1_Acquire'], DetectorIdle, 60)
+		##### wait_pv(global_PVs['Cam1_Acquire'], DetectorIdle, 60)      ## NEED TO BE RE_ENABLED!!!!!!!
 		# update sample rotation
 		#sample_rot += step_size
 	# set trigger move to internal for post dark and white
@@ -191,7 +187,7 @@ def mirror_fly_scan(rev=False):
 	return interf_arr
 
 
-def full_tomo_scan():
+def full_tomo_scan(variableDict, detector_filename):
 	print 'start_scan()'
 	init_general_PVs(global_PVs, variableDict)
 	if variableDict.has_key('StopTheScan'):
@@ -206,17 +202,18 @@ def full_tomo_scan():
 	# Start scan sleep in min so min * 60 = sec
 	time.sleep(float(variableDict['StartSleep_min']) * 60.0)
 	setup_detector(global_PVs, variableDict)
-	setup_writer(global_PVs, variableDict)
+	setup_writer(global_PVs, variableDict, detector_filename)
 	if int(variableDict['PreDarkImages']) > 0:
 		close_shutters(global_PVs, variableDict)
 		print 'Capturing Pre Dark Field'
 		capture_multiple_projections(global_PVs, variableDict, int(variableDict['PreDarkImages']), FrameTypeDark)
 	if int(variableDict['PreWhiteImages']) > 0:
 		print 'Capturing Pre White Field'
+		global_PVs['Cam1_AcquireTime'].put(float(variableDict['ExposureTime_Flat']) )
 		open_shutters(global_PVs, variableDict)
 		move_sample_out(global_PVs, variableDict)
-#		time.sleep(5)
 		capture_multiple_projections(global_PVs, variableDict, int(variableDict['PreWhiteImages']), FrameTypeWhite)
+		global_PVs['Cam1_AcquireTime'].put(float(variableDict['ExposureTime']) )
 	move_sample_in(global_PVs, variableDict)
 	#time.sleep(float(variableDict['StabilizeSleep_ms']) / 1000.0)
 	open_shutters(global_PVs, variableDict)
@@ -226,12 +223,13 @@ def full_tomo_scan():
 #	interf_arrs += [interf_step]
 	if int(variableDict['PostWhiteImages']) > 0:
 		print 'Capturing Post White Field'
+  		global_PVs['Cam1_AcquireTime'].put(float(variableDict['ExposureTime_Flat']) )
 		move_sample_out(global_PVs, variableDict)
 		capture_multiple_projections(global_PVs, variableDict, int(variableDict['PostWhiteImages']), FrameTypeWhite)
+		global_PVs['Cam1_AcquireTime'].put(float(variableDict['ExposureTime']) )
 	if int(variableDict['PostDarkImages']) > 0:
 		print 'Capturing Post Dark Field'
 		close_shutters(global_PVs, variableDict)
-#		time.sleep(5)
 		capture_multiple_projections(global_PVs, variableDict, int(variableDict['PostDarkImages']), FrameTypeDark)
 	close_shutters(global_PVs, variableDict)
 	#if int(variableDict['ExternalShutter']) == 1:
@@ -240,10 +238,12 @@ def full_tomo_scan():
 	reset_CCD(global_PVs, variableDict)
 	#move_dataset_to_run_dir()
 
-
+    
 def main():
 	update_variable_dict(variableDict)
-	full_tomo_scan()
+	init_general_PVs(global_PVs, variableDict)
+	FileName = global_PVs['HDF1_FileName'].get(as_string=True)
+	full_tomo_scan(variableDict, FileName)
 
 if __name__ == '__main__':
 	main()

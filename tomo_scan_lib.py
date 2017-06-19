@@ -1,7 +1,8 @@
 '''
 	Tomo Scan Lib for Sector 32 ID C
-
+    
 '''
+
 import sys
 import json
 import time
@@ -11,6 +12,8 @@ import shutil
 import os
 import imp
 import traceback
+import math
+
 
 ShutterA_Open_Value = 0
 ShutterA_Close_Value = 1
@@ -22,10 +25,13 @@ FrameTypeWhite = 2
 DetectorIdle = 0
 DetectorAcquire = 1
 UseShutterA = 0
-UseShutterB = 1
-PG_Trigger_External_Trigger = 1
+UseShutterB = 0
+
+PG_Trigger_External_Trigger = 1 # Important for the Point Grey (continuous mode as clock issues)
 Recursive_Filter_Type = 'RecursiveAve'
 
+if UseShutterA == 0 & UseShutterB ==0:
+    print('### WARNING: shutters are deactivted during the scans !!!!')
 
 def update_variable_dict(variableDict):
 	argDic = {}
@@ -63,6 +69,8 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['Cam1_ImageMode'] = PV(variableDict['IOC_Prefix'] + 'cam1:ImageMode')
 	global_PVs['Cam1_ArrayCallbacks'] = PV(variableDict['IOC_Prefix'] + 'cam1:ArrayCallbacks')
 	global_PVs['Cam1_AcquirePeriod'] = PV(variableDict['IOC_Prefix'] + 'cam1:AcquirePeriod')
+	global_PVs['Cam1_FrameRate_on_off'] = PV(variableDict['IOC_Prefix'] + 'cam1:FrameRateOnOff')
+	global_PVs['Cam1_FrameRate_val'] = PV(variableDict['IOC_Prefix'] + 'cam1:FrameRateValAbs')
 	global_PVs['Cam1_TriggerMode'] = PV(variableDict['IOC_Prefix'] + 'cam1:TriggerMode')
 	global_PVs['Cam1_SoftwareTrigger'] = PV(variableDict['IOC_Prefix'] + 'cam1:SoftwareTrigger')
 	global_PVs['Cam1_AcquireTime'] = PV(variableDict['IOC_Prefix'] + 'cam1:AcquireTime')
@@ -70,6 +78,7 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['Cam1_FrameType'] = PV(variableDict['IOC_Prefix'] + 'cam1:FrameType')
 	global_PVs['Cam1_NumImages'] = PV(variableDict['IOC_Prefix'] + 'cam1:NumImages')
 	global_PVs['Cam1_Acquire'] = PV(variableDict['IOC_Prefix'] + 'cam1:Acquire')
+	global_PVs['Cam1_Display'] = PV(variableDict['IOC_Prefix'] + 'image1:EnableCallbacks')
 
 	#hdf5 writer pv's
 	global_PVs['HDF1_AutoSave'] = PV(variableDict['IOC_Prefix'] + 'HDF1:AutoSave')
@@ -84,15 +93,53 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['HDF1_FullFileName_RBV'] = PV(variableDict['IOC_Prefix'] + 'HDF1:FullFileName_RBV')
 	global_PVs['HDF1_FileTemplate'] = PV(variableDict['IOC_Prefix'] + 'HDF1:FileTemplate')
 	global_PVs['HDF1_ArrayPort'] = PV(variableDict['IOC_Prefix'] + 'HDF1:NDArrayPort')
+	global_PVs['HDF1_NextFile'] = PV(variableDict['IOC_Prefix'] + 'HDF1:FileNumber')
+
+	#tiff writer pv's
+	global_PVs['TIFF1_AutoSave'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:AutoSave')
+	global_PVs['TIFF1_DeleteDriverFile'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:DeleteDriverFile')
+	global_PVs['TIFF1_EnableCallbacks'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:EnableCallbacks')
+	global_PVs['TIFF1_BlockingCallbacks'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:BlockingCallbacks')
+	global_PVs['TIFF1_FileWriteMode'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FileWriteMode')
+	global_PVs['TIFF1_NumCapture'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:NumCapture')
+	global_PVs['TIFF1_Capture'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:Capture')
+	global_PVs['TIFF1_Capture_RBV'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:Capture_RBV')
+	global_PVs['TIFF1_FileName'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FileName')
+	global_PVs['TIFF1_FullFileName_RBV'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FullFileName_RBV')
+	global_PVs['TIFF1_FileTemplate'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FileTemplate')
+	global_PVs['TIFF1_ArrayPort'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:NDArrayPort')
 
 	#motor pv's
-	global_PVs['Motor_SampleX'] = PV('32idcTXM:mcs:c1:m2.VAL')
-	global_PVs['Motor_SampleY'] = PV('32idcTXM:xps:c1:m7.VAL')
-#	global_PVs['Motor_SampleRot'] = PV('32idcTXM:hydra:c0:m1.VAL')
-	global_PVs['Motor_SampleRot'] = PV('32idcTXM:ens:c1:m1.VAL')
-	global_PVs['Motor_SampleZ'] = PV('32idcTXM:mcs:c1:m1.VAL')
-	global_PVs['Motor_X_Tile'] = PV('32idc01:m33.VAL')
-	global_PVs['Motor_Y_Tile'] = PV('32idc02:m15.VAL')
+	if 1: # TXM
+        	global_PVs['Motor_SampleX'] = PV('32idcTXM:nf:c0:m1.VAL')
+        	global_PVs['Motor_SampleY'] = PV('32idcTXM:mxv:c1:m1.VAL') # for the TXM
+        	global_PVs['Motor_SampleRot'] = PV('32idcTXM:ens:c1:m1.VAL') # Professional Instrument air bearing rotary stage
+        	global_PVs['Motor_Sample_Top_X'] = PV('32idcTXM:mcs:c3:m7.VAL') # Smaract XZ TXM set
+        	global_PVs['Motor_Sample_Top_Z'] = PV('32idcTXM:mcs:c1:m8.VAL') # Smaract XZ TXM set
+#        	global_PVs['Motor_X_Tile'] = PV('32idc01:m33.VAL')
+#        	global_PVs['Motor_Y_Tile'] = PV('32idc02:m15.VAL')
+	else: # micro-CT
+        	global_PVs['Motor_SampleX'] = PV('32idc01:m33.VAL')
+        	global_PVs['Motor_SampleY'] = PV('32idc02:m15.VAL') # for the micro-CT system
+        	global_PVs['Motor_SampleRot'] = PV('32idcTXM:hydra:c0:m1.VAL') # PI Micos air bearing rotary stage
+        	global_PVs['Motor_SampleZ'] = PV('32idcTXM:mcs:c1:m1.VAL')
+        	global_PVs['Motor_Sample_Top_X'] = PV('32idcTXM:mcs:c1:m2.VAL') # Smaract XZ micro-CT set
+        	global_PVs['Motor_Sample_Top_Z'] = PV('32idcTXM:mcs:c1:m1.VAL') # Smaract XZ micro-CT set
+        	global_PVs['Motor_X_Tile'] = PV('32idc01:m33.VAL')
+        	global_PVs['Motor_Y_Tile'] = PV('32idc02:m15.VAL')
+
+	#Zone plate:
+	global_PVs['zone_plate_x'] = PV('32idcTXM:mcs:c2:m2.VAL')
+	global_PVs['zone_plate_y'] = PV('32idc01:m110.VAL')
+	global_PVs['zone_plate_z'] = PV('32idcTXM:mcs:c2:m3.VAL')
+	# MST2 = vertical axis
+	global_PVs['Smaract_mode'] = PV('32idcTXM:mcsAsyn1.AOUT') # pv.Smaract_mode.put(':MST3,100,500,100')
+	global_PVs['zone_plate_2_x'] = PV('32idcTXM:mcs:c0:m3.VAL')
+	global_PVs['zone_plate_2_y'] = PV('32idcTXM:mcs:c0:m1.VAL')
+	global_PVs['zone_plate_2_z'] = PV('32idcTXM:mcs:c0:m2.VAL')
+
+	# CCD motors:
+	global_PVs['CCD_Motor'] = PV('32idcTXM:mxv:c1:m6.VAL')
 
 	#shutter pv's
 	global_PVs['ShutterA_Open'] = PV('32idb:rshtrA:Open')
@@ -102,16 +149,32 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['ShutterB_Close'] = PV('32idb:fbShutter:Close.PROC')
 	global_PVs['ShutterB_Move_Status'] = PV('PB:32ID:STA_B_SBS_CLSD_PL')
 	global_PVs['ExternalShutter_Trigger'] = PV('32idcTXM:shutCam:go')
+	global_PVs['Fast_Shutter_Uniblitz'] = PV('32idcTXM:uniblitz:control') # State 0 = Close, 1 = Open
 
 	#fly macro
-	global_PVs['Fly_ScanDelta'] = PV('32idcTXM:eFly:scanDelta')
-	global_PVs['Fly_StartPos'] = PV('32idcTXM:eFly:startPos')
-	global_PVs['Fly_EndPos'] = PV('32idcTXM:eFly:endPos')
-	global_PVs['Fly_SlewSpeed'] = PV('32idcTXM:eFly:slewSpeed')
-	global_PVs['Fly_Taxi'] = PV('32idcTXM:eFly:taxi')
-	global_PVs['Fly_Run'] = PV('32idcTXM:eFly:fly')
-	global_PVs['Fly_ScanControl'] = PV('32idcTXM:eFly:scanControl')
-	global_PVs['Fly_Calc_Projections'] = PV('32idcTXM:eFly:calcNumTriggers')
+	if 1: # for the PI Micos
+        	global_PVs['Fly_ScanDelta'] = PV('32idcTXM:eFly:scanDelta')
+        	global_PVs['Fly_StartPos'] = PV('32idcTXM:eFly:startPos')
+        	global_PVs['Fly_EndPos'] = PV('32idcTXM:eFly:endPos')
+        	global_PVs['Fly_SlewSpeed'] = PV('32idcTXM:eFly:slewSpeed')
+        	global_PVs['Fly_Taxi'] = PV('32idcTXM:eFly:taxi')
+        	global_PVs['Fly_Run'] = PV('32idcTXM:eFly:fly')
+        	global_PVs['Fly_ScanControl'] = PV('32idcTXM:eFly:scanControl')
+        	global_PVs['Fly_Calc_Projections'] = PV('32idcTXM:eFly:calcNumTriggers')
+        	global_PVs['Fly_Set_Encoder_Pos'] = PV('32idcTXM:eFly:EncoderPos')
+        	global_PVs['Theta_Array'] = PV('32idcTXM:eFly:motorPos.AVAL')
+
+	else: # for the Professional Instrument
+        	global_PVs['Fly_ScanDelta'] = PV('32idcTXM:PSOFly3:scanDelta')
+        	global_PVs['Fly_StartPos'] = PV('32idcTXM:PSOFly3:startPos')
+        	global_PVs['Fly_EndPos'] = PV('32idcTXM:PSOFly3:endPos')
+        	global_PVs['Fly_SlewSpeed'] = PV('32idcTXM:PSOFly3:slewSpeed')
+        	global_PVs['Fly_Taxi'] = PV('32idcTXM:PSOFly3:taxi')
+        	global_PVs['Fly_Run'] = PV('32idcTXM:PSOFly3:fly')
+        	global_PVs['Fly_ScanControl'] = PV('32idcTXM:PSOFly3:scanControl')
+        	global_PVs['Fly_Calc_Projections'] = PV('32idcTXM:PSOFly3:numTriggers')
+        	global_PVs['Theta_Array'] = PV('32idcTXM:PSOFly3:motorPos.AVAL')
+        	global_PVs['Fly_Set_Encoder_Pos'] = PV('32idcTXM:eFly:EncoderPos')
 
 	# theta controls
 	global_PVs['Reset_Theta'] = PV('32idcTXM:SG_RdCntr:reset.PROC')
@@ -145,20 +208,7 @@ def init_general_PVs(global_PVs, variableDict):
 	global_PVs['Proc1_AutoReset_Filter'] = PV(variableDict['IOC_Prefix'] + 'Proc1:AutoResetFilter')
 	global_PVs['Proc1_Filter_Callbacks'] = PV(variableDict['IOC_Prefix'] + 'Proc1:FilterCallbacks')
 
-	#tiff writer pv's
-	global_PVs['TIFF1_AutoSave'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:AutoSave')
-	global_PVs['TIFF1_DeleteDriverFile'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:DeleteDriverFile')
-	global_PVs['TIFF1_EnableCallbacks'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:EnableCallbacks')
-	global_PVs['TIFF1_BlockingCallbacks'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:BlockingCallbacks')
-	global_PVs['TIFF1_FileWriteMode'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FileWriteMode')
-	global_PVs['TIFF1_NumCapture'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:NumCapture')
-	global_PVs['TIFF1_Capture'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:Capture')
-	global_PVs['TIFF1_FullFileName_RBV'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FullFileName_RBV')
-	global_PVs['TIFF1_FileNumber'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FileNumber')
-	global_PVs['TIFF1_FileName'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:FileName')
-	global_PVs['TIFF1_ArrayPort'] = PV(variableDict['IOC_Prefix'] + 'TIFF1:NDArrayPort')
-	
-	#energy
+    	#energy
 	global_PVs['DCMmvt'] = PV('32ida:KohzuModeBO.VAL')
 	global_PVs['GAPputEnergy'] = PV('32id:ID32us_energy')
 	global_PVs['EnergyWait'] = PV('ID32us:Busy')
@@ -180,18 +230,29 @@ def stop_scan(global_PVs, variableDict):
 	global_PVs['HDF1_Capture'].put(0)
 	wait_pv(global_PVs['HDF1_Capture'], 0)
 	reset_CCD(global_PVs, variableDict)
+	reset_CCD(global_PVs, variableDict)
+	global_PVs['Fast_Shutter_Uniblitz'].put(1, wait=True) # Open the fast shutter #### FOR SUJI
+
 
 def reset_CCD(global_PVs, variableDict):
-	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
-	global_PVs['Cam1_TriggerMode'].put('Overlapped', wait=True)
-	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)
+	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)    # 
+	global_PVs['Cam1_TriggerMode'].put('Overlapped', wait=True)  # sequence Internal / Overlapped / internal because of CCD bug!!
+	global_PVs['Cam1_TriggerMode'].put('Internal', wait=True)    #
 	global_PVs['Proc1_Filter_Callbacks'].put( 'Every array' )
-	global_PVs['HDF1_ArrayPort'].put(global_PVs['Proc1_ArrayPort'].get())
+#	global_PVs['HDF1_ArrayPort'].put(global_PVs['Proc1_ArrayPort'].get())
 	global_PVs['Cam1_ImageMode'].put('Continuous', wait=True)
+#	global_PVs['Cam1_FrameRate_on_off'].put(1, wait=True) # force a slow frame rate for the display
+#	global_PVs['Cam1_FrameRate_val'].put(5, wait=True) # force a slow frame rate for the display --> 5 fps
+	global_PVs['Cam1_Display'].put(1)
+
 	global_PVs['Cam1_Acquire'].put(DetectorAcquire); wait_pv(global_PVs['Cam1_Acquire'], DetectorAcquire, 2)
 
 def setup_detector(global_PVs, variableDict):
-	print 'setup_detector()'
+	print(' ')
+	print('  *** setup_detector')
+	if variableDict.has_key('Display_live'):
+		print '** disable live display'
+		global_PVs['Cam1_Display'].put( int( variableDict['Display_live'] ) )
 	global_PVs['Cam1_ImageMode'].put('Multiple')
 	global_PVs['Cam1_ArrayCallbacks'].put('Enable')
 	#global_PVs['Image1_Callbacks'].put('Enable')
@@ -200,10 +261,10 @@ def setup_detector(global_PVs, variableDict):
 	# if we are using external shutter then set the exposure time
 	global_PVs['SetSoftGlueForStep'].put('0')
 	global_PVs['Cam1_FrameRateOnOff'].put(0)
-	#if int(variableDict['ExternalShutter']) == 1:
-	#	global_PVs['ExternShutterExposure'].put(float(variableDict['ExposureTime']))
-	#	global_PVs['ExternShutterDelay'].put(float(variableDict['ShutterOpenDelay']))
-	#	global_PVs['SetSoftGlueForStep'].put('1')
+	if int(variableDict['ExternalShutter']) == 1:
+		global_PVs['ExternShutterExposure'].put(float(variableDict['ExposureTime']))
+		global_PVs['ExternShutterDelay'].put(float(variableDict['Ext_ShutterOpenDelay']))
+		global_PVs['SetSoftGlueForStep'].put('1')
 	# if software trigger capture two frames (issue with Point grey grasshopper)
 	if PG_Trigger_External_Trigger == 1:
 		wait_time_sec = int(variableDict['ExposureTime']) + 5
@@ -220,6 +281,7 @@ def setup_detector(global_PVs, variableDict):
 	else:
 		global_PVs['Cam1_TriggerMode'].put('Internal')
 	#global_PVs['ClearTheta'].put(1)
+	print('  *** setup_detector: Done!')
 
 
 def setup_writer(global_PVs, variableDict, filename=None):
@@ -258,6 +320,43 @@ def setup_writer(global_PVs, variableDict, filename=None):
 	global_PVs['HDF1_Capture'].put(1)
 	wait_pv(global_PVs['HDF1_Capture'], 1)
 
+
+def setup_tiff_writer(global_PVs, variableDict, filename=None):
+	print('  ')
+	print('  *** setup_writer')
+	global_PVs['TIFF1_ArrayPort'].put(variableDict['TIFFNDArrayPort'], wait=True)
+	if variableDict.has_key('Recursive_Filter_Enabled'):
+		if variableDict['Recursive_Filter_Enabled'] == 1:
+#			global_PVs['Proc1_Callbacks'].put('Disable')
+			global_PVs['Proc1_Callbacks'].put('Enable')
+			global_PVs['Proc1_Filter_Enable'].put('Disable')
+			global_PVs['TIFF1_ArrayPort'].put('PROC1')
+			global_PVs['Proc1_Filter_Type'].put( Recursive_Filter_Type )
+			global_PVs['Proc1_Num_Filter'].put( int( variableDict['Recursive_Filter_N_Images'] ) )
+			global_PVs['Proc1_Reset_Filter'].put( 1 )
+			global_PVs['Proc1_AutoReset_Filter'].put( 'Yes' )
+			global_PVs['Proc1_Filter_Callbacks'].put( 'Array N only' )
+#		else:
+##			global_PVs['Proc1_Callbacks'].put('Disable')
+#			global_PVs['Proc1_Filter_Enable'].put('Disable')
+#			global_PVs['TIFF1_ArrayPort'].put(global_PVs['Proc1_ArrayPort'].get())
+#	else:
+##		global_PVs['Proc1_Callbacks'].put('Disable')
+#		global_PVs['Proc1_Filter_Enable'].put('Disable')
+#		global_PVs['TIFF1_ArrayPort'].put(global_PVs['Proc1_ArrayPort'].get())
+	global_PVs['TIFF1_AutoSave'].put('Yes')
+	global_PVs['TIFF1_DeleteDriverFile'].put('No')
+	global_PVs['TIFF1_EnableCallbacks'].put('Enable')
+	global_PVs['TIFF1_BlockingCallbacks'].put('No')
+	totalProj = int(variableDict['Projections'])
+	global_PVs['TIFF1_NumCapture'].put(totalProj)
+	global_PVs['TIFF1_FileWriteMode'].put(str(variableDict['FileWriteMode']), wait=True)
+	if not filename == None:
+		global_PVs['TIFF1_FileName'].put(filename)
+	global_PVs['TIFF1_Capture'].put(1)
+	wait_pv(global_PVs['TIFF1_Capture'], 1)
+	print('  *** setup_writer: Done!')
+
 def capture_multiple_projections(global_PVs, variableDict, num_proj, frame_type):
 	print 'capture_multiple_projections(', num_proj, ')'
 	wait_time_sec = int(variableDict['ExposureTime']) + 5
@@ -281,31 +380,38 @@ def capture_multiple_projections(global_PVs, variableDict, num_proj, frame_type)
 
 
 def move_sample_in(global_PVs, variableDict):
-	print 'move_sample_in()'
+	print(' ')
+	print('  *** move_sample_in')
 #	global_PVs['Motor_X_Tile'].put(float(variableDict['SampleXIn']), wait=True)
-	global_PVs['Motor_SampleX'].put(float(variableDict['SampleXIn']), wait=True)
+#	global_PVs['Motor_SampleX'].put(float(variableDict['SampleXIn']), wait=True)
+	global_PVs['Motor_Sample_Top_X'].put(float(variableDict['SampleXIn']), wait=True)
 #	global_PVs['Motor_SampleY'].put(float(variableDict['SampleYIn']), wait=True)
 #	global_PVs['Motor_SampleZ'].put(float(variableDict['SampleZIn']), wait=True)
 	global_PVs['Motor_SampleRot'].put(0, wait=True)
+	print('  *** move_sample_in: Done!')
 
 
 def move_sample_out(global_PVs, variableDict):
 	print 'move_sample_out()'
 #	global_PVs['Motor_SampleRot'].put(float(variableDict['SampleRotOut']), wait=True)
 #	global_PVs['Motor_X_Tile'].put(float(variableDict['SampleXOut']), wait=True)
-	global_PVs['Motor_SampleX'].put(float(variableDict['SampleXOut']), wait=True)
+#	global_PVs['Motor_SampleX'].put(float(variableDict['SampleXOut']), wait=True)
+    	global_PVs['Motor_Sample_Top_X'].put(float(variableDict['SampleXOut']), wait=True)
 #	global_PVs['Motor_SampleY'].put(float(variableDict['SampleYOut']), wait=True)
 #	global_PVs['Motor_SampleZ'].put(float(variableDict['SampleZOut']), wait=True)
 	global_PVs['Motor_SampleRot'].put(0, wait=True)
 
 def open_shutters(global_PVs, variableDict):
-	print 'open_shutters()'
+	print(' ')
+	print('  *** open_shutters')
 	if UseShutterA > 0:
 		global_PVs['ShutterA_Open'].put(1, wait=True)
 		wait_pv(global_PVs['ShutterA_Move_Status'], ShutterA_Open_Value)
+        	time.sleep(3)
 	if UseShutterB > 0:
 		global_PVs['ShutterB_Open'].put(1, wait=True)
 		wait_pv(global_PVs['ShutterB_Move_Status'], ShutterB_Open_Value)
+	print('  *** open_shutters: Done!')
 
 
 def close_shutters(global_PVs, variableDict):
@@ -362,37 +468,57 @@ def move_dataset_to_run_dir(global_PVs, variableDict):
 	except:
 		print 'error moving dataset to run directory'
 
-def move_energy(energy, global_PVs, variableDict):
-	print 'move_energy()', energy
-	prev_energy = float(global_PVs['DCMputEnergy'].get())
+
+def move_energy(global_PVs, variableDict): # TO BE TESTED!!!
+     # Extract variables from variableDict:
+	constant_mag = int(variableDict['constant_mag'])
+	new_Energy = float(variableDict['new_Energy'])
+	ZP_diameter = float(variableDict['ZP_diameter'])
+	Offset = float(variableDict['Offset'])
+	drn = float(variableDict['drn'])
+    
+	print 'move to a new energy:%3.3f' % new_Energy
+	energy_init = float(global_PVs['DCMputEnergy'].get())
+#	energy_init = global_PVs['DCMputEnergy'].get() # energy before changing
+	landa_init = 1240.0 / (energy_init * 1000.0)
+	ZP_focal = ZP_diameter * drn / (1000.0 * landa_init)
 	curr_CCD_location = float(global_PVs['CCD_Motor'].get())
+	D_init = (curr_CCD_location + math.sqrt(curr_CCD_location * curr_CCD_location - 4.0 * curr_CCD_location * ZP_focal) ) / 2.0
+	new_landa = 1240.0 / (new_Energy * 1000.0)
+	ZP_focal = ZP_diameter * drn / (1000.0 * new_landa)
+	
+	if constant_mag: # CCD will move to maintain magnification during energy change
+        
+        	Mag = (D_init - ZP_focal) / ZP_focal
+        	print 'mag', Mag
+        	global_PVs['DCMmvt'].put(1)
+        
+        	dist_ZP_ccd = Mag * ZP_focal + ZP_focal
+        	ZP_WD = dist_ZP_ccd * ZP_focal / (dist_ZP_ccd - ZP_focal)
+        	CCD_location = ZP_WD + dist_ZP_ccd
+        	print 'move ccd ', CCD_location
+        	global_PVs['CCD_Motor'].put(CCD_location, wait=True)
+        	print 'move zp ', ZP_WD
+        	global_PVs['zone_plate_z'].put(ZP_WD, wait=True)
 
-	landa = 1240.0 / (prev_energy * 1000.0)
-	ZP_focal = ZP_diameter * drn / (1000.0 * landa)
-	D = (curr_CCD_location + math.sqrt(curr_CCD_location * curr_CCD_location - 4.0 * curr_CCD_location * ZP_focal) ) / 2.0
-	Mag = (D - ZP_focal) / ZP_focal
-	print 'mag', Mag
-	global_PVs['DCMmvt'].put(1)
+	else: # no constant magnification, i.e. CCD will not move
+        	
+        	D_new = (curr_CCD_location + math.sqrt(curr_CCD_location * curr_CCD_location - 4.0 * curr_CCD_location * ZP_focal) ) / 2.0
+        	ZP_WD = D_new * ZP_focal / (D_new - ZP_focal)
+        	print 'move zp ', ZP_WD
+        	global_PVs['zone_plate_z'].put(ZP_WD, wait=True)
 
-	landa = 1240.0 / (energy * 1000.0)
-	ZP_focal = ZP_diameter * drn / (1000.0 * landa)
-	dist_ZP_ccd = Mag * ZP_focal + ZP_focal
-	ZP_WD = dist_ZP_ccd * ZP_focal / (dist_ZP_ccd - ZP_focal)
-	CCD_location = ZP_WD + dist_ZP_ccd
-	print 'move ccd ', CCD_location
-	global_PVs['CCD_Motor'].put(CCD_location, wait=True)
-	print 'move zp ', ZP_WD
-	global_PVs['ZpLocation'].put(ZP_WD, wait=True)
+	print('* Move the DCM to the new energy: %3.3f keV*') % new_Energy
+	global_PVs['DCMputEnergy'].put(new_Energy, wait=True)
 
-	global_PVs['DCMputEnergy'].put(energy, wait=True)
-
-	global_PVs['GAPputEnergy'].put(energy)
+	print('* Move gap to the new energy: %3.3f keV*') % new_Energy
+	global_PVs['GAPputEnergy'].put(new_Energy)
 	wait_pv(global_PVs['EnergyWait'], 0)
-	global_PVs['GAPputEnergy'].put(energy + float(variableDict['Offset']))
+	print('* Add the energy offset to the gap *')
+	global_PVs['GAPputEnergy'].put(new_Energy + Offset)
 	wait_pv(global_PVs['EnergyWait'], 0)
 	global_PVs['DCMmvt'].put(0)
-
-
+    
 
 ########################## Interlaced #########################
 def bitreversed_decimal(dec_input, maxbits):

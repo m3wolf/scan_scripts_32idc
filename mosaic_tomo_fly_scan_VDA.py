@@ -13,37 +13,38 @@ import imp
 import traceback
 
 from tomo_scan_lib import *
-import tomo_fly_scan
+import tomo_fly_scan_VDA
 
 global variableDict
 
-variableDict = {'PreDarkImages': 5,
-                'PreWhiteImages': 10,
-                'Projections': 6000,
-                'PostDarkImages': 5,
-                'PostWhiteImages': 10,
-                'SampleXOut': 10,
+variableDict = {'PreDarkImages': 10,
+                'PreWhiteImages': 50,
+                'Projections': 12000,
+                'PostDarkImages': 10,
+                'PostWhiteImages': 50,
+                'SampleXOut': 15,
 #                'SampleYOut': 0.0,
                 'SampleXIn': 0.0,
 #                'SampleYIn': -10.0,
                 'SampleStartPos': 0.0,
-                'SampleEndPos': 180.0,
+                'SampleEndPos': 360.0,
                 'StartSleep_min': 0,
                 #'StabilizeSleep_ms': 1000,
-                'ExposureTime': 0.2,
-                'CCD_Readout': 0.27,
+                'ExposureTime': 0.020,
+                'ExposureTime_Flat': 0.020,
+                'CCD_Readout': 0.015,
                 'IOC_Prefix': '32idcPG3:',
                 'FileWriteMode': 'Stream',
-                'X_Start': -3.2,
-                'X_NumTiles': 10,
-                'X_Stop': 3.6,
-                'Y_Start': 1.24,
-                'Y_NumTiles': 4,
-                'Y_Stop': 3.1,
+                'X_Start': -5,
+                'X_NumTiles': 5,
+                'X_Stop': 1,
+                'Y_Start': 0,
+                'Y_NumTiles': 14,
+                'Y_Stop': 15.9,
 #                'SampleMoveSleep': 0.0,
                 'MosaicMoveSleep': 5.0,
                 'Display_live': 0
-                #'UseInterferometer': 0
+#                'UseInterferometer': 0
                 }
 
 
@@ -85,7 +86,7 @@ def main():
             time.sleep(float(variableDict['MosaicMoveSleep']))
             #wait_pv(global_PVs["Motor_X_Tile"], x_val, 600)
             x_val += x_itr
-            tomo_fly_scan.start_scan(variableDict, FileName+'_y' + str(y) + '_x' + str(x) )
+            tomo_fly_scan_VDA.start_scan(variableDict, FileName+'_y' + str(y) + '_x' + str(x) )
     global_PVs['Fly_ScanControl'].put('Standard')
     global_PVs['HDF1_FileName'].put(FileName)
     global_PVs['HDF1_FileTemplate'].put('%s%s_%3.3d.h5')

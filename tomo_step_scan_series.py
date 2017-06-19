@@ -1,6 +1,7 @@
 '''
 	TomoScan for Sector 32 ID C
 
+      In progress: repeat a serie of tomoscan from 0 to 180 then 180 to 0 for several hours.
 '''
 import sys
 import json
@@ -17,16 +18,17 @@ from tomo_scan_lib import *
 
 global variableDict
 
-variableDict = {'PreDarkImages': 4,
+variableDict = {'nCycles': 245, # number of tomoscan to be acquired
+		'PreDarkImages': 0,
 		'PreWhiteImages': 10,
-		'Projections': 1201,
+		'Projections': 181,
 		'ProjectionsPerRot': 1, # saving several images / angle
 		'PostDarkImages': 0,
-		'PostWhiteImages': 10,
-		'SampleXOut': 0.3,
+		'PostWhiteImages': 0,
+		'SampleXOut': 0.5,
 #		'SampleYOut': 0.1,
 #		'SampleZOut': 0,
-		'SampleRotOut': 00.0,
+#		'SampleRotOut': 90.0,
 		'SampleXIn': 0.0,
 #		'SampleYIn': 0.1,
 #		'SampleZIn': 0.0,
@@ -34,12 +36,12 @@ variableDict = {'PreDarkImages': 4,
 		'SampleEnd_Rot': 180.0,
 		'StartSleep_min': 0,
 		'StabilizeSleep_ms': 20,
-		'ExposureTime': 3.9,
+		'ExposureTime': 0.4,
 		'IOC_Prefix': '32idcPG3:',
 		'FileWriteMode': 'Stream',
 		'Interlaced': 0,
 		'Interlaced_Sub_Cycles': 4,
-		'rot_speed_deg_per_s': 0.5,
+		'rot_speed_deg_per_s': 5,
 		'Recursive_Filter_Enabled': 0,
 		'Recursive_Filter_N_Images': 2,
 		'Recursive_Filter_Type': 'RecursiveAve',
@@ -88,19 +90,11 @@ def tomo_scan():
 	interf_arr = []
 	if variableDict.has_key('UseInterferometer') and int(variableDict['UseInterferometer']) > 0:
 		global_PVs['Interferometer_Mode'].put('ONE-SHOT')
-	if float(variableDict['Projections'])<=1:
-		step_size = 0
-	else:
-		step_size = ((float(variableDict['SampleEnd_Rot']) - float(variableDict['SampleStart_Rot'])) / (float(variableDict['Projections']) - 1.0))
-
+	step_size = ((float(variableDict['SampleEnd_Rot']) - float(variableDict['SampleStart_Rot'])) / (float(variableDict['Projections']) - 1.0))
 	if variableDict.has_key('Interlaced') and int(variableDict['Interlaced']) > 0:
 		theta = gen_interlaced_theta()
 	else:
-		if step_size == 0:
-			theta = 0
-		else:
-			theta = numpy.arange(float(variableDict['SampleStart_Rot']), float(variableDict['SampleStart_Rot']) + float(variableDict['Projections'])*step_size, step_size)
-            
+		theta = numpy.arange(float(variableDict['SampleStart_Rot']), float(variableDict['SampleStart_Rot']) + float(variableDict['Projections'])*step_size, step_size)
 	#end_pos = float(variableDict['SampleEnd_Rot'])
 	global_PVs['Cam1_FrameType'].put(FrameTypeData, wait=True)
 	global_PVs['Cam1_NumImages'].put(1, wait=True)
@@ -233,7 +227,7 @@ def full_tomo_scan():
 		close_shutters(global_PVs, variableDict)
 #		time.sleep(5)
 		capture_multiple_projections(global_PVs, variableDict, int(variableDict['PostDarkImages']), FrameTypeDark)
-	close_shutters(global_PVs, variableDict)
+#	close_shutters(global_PVs, variableDict)
 	#if int(variableDict['ExternalShutter']) == 1:
 	#	global_PVs['SetSoftGlueForStep'].put('0')
 	add_extra_hdf5(global_PVs, variableDict, theta, interf_arrs)	
@@ -243,7 +237,22 @@ def full_tomo_scan():
 
 def main():
 	update_variable_dict(variableDict)
-	full_tomo_scan()
+    	init_general_PVs(global_PVs, variableDict)
+
+	if variableDict.has_key('StopTheScan'): # need to add it in the loop??
+		stop_scan(global_PVs, variableDict)
+		return
+
+	global_PVs['HDF1_NextFile'].put(0)
+	for iCycle in range(0,variableDict['nCycles']):
+		full_tomo_scan()
+		SampleStart_Rot = variableDict['SampleStart_Rot']
+		SampleEnd_Rot = variableDict['SampleEnd_Rot']
+		variableDict['SampleStart_Rot'] = SampleEnd_Rot
+		variableDict['SampleEnd_Rot'] = SampleStart_Rot
+		print('  --> new SampleStart_Rot = %3.3f deg') % variableDict['SampleStart_Rot']
+		print('  --> new SampleEnd_Rot = %3.3f deg') % variableDict['SampleEnd_Rot']
+
 
 if __name__ == '__main__':
 	main()
